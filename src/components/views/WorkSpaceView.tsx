@@ -173,7 +173,6 @@ export const WorkSpaceView = () => {
       dueTime: dueTime,
       reminderDateTime: `${targetDate}T${dueTime}`,
       recurring: 'None',
-      reminderSent: isPastTime,
     });
 
     setTaskTitle('');
