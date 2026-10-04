@@ -190,8 +190,9 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
 
           // Check Task Due Alarm (using local date & time comparison)
           const isDueOrPast =
-            t.dueDate < todayStr ||
-            (t.dueDate === todayStr && t.dueTime && t.dueTime <= currentTimeStr);
+            t.status !== 'Done' &&
+            (t.dueDate < todayStr ||
+              (t.dueDate === todayStr && t.dueTime && t.dueTime <= currentTimeStr));
 
           if (isDueOrPast && !t.reminderSent) {
             playNotificationSound();

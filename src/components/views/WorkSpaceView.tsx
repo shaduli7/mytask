@@ -36,6 +36,7 @@ export const WorkSpaceView = () => {
   const [noteContent, setNoteContent] = useState('');
   const [dueTime, setDueTime] = useState(() => {
     const d = new Date();
+    d.setMinutes(d.getMinutes() + 15);
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   });
   const [assignDate, setAssignDate] = useState(new Date().toISOString().split('T')[0]);
@@ -66,11 +67,23 @@ export const WorkSpaceView = () => {
       const currentTimeStr = `${hours}:${mins}`;
 
       const ringing = tasks.find((t) => {
+        // 1. Task must NOT be completed!
         if (t.status === 'Done') return false;
-        const isPast =
-          t.dueDate < todayDateStr ||
-          (t.dueDate === todayDateStr && t.dueTime && t.dueTime <= currentTimeStr);
-        return isPast;
+
+        // 2. Alarm must NOT have been turned off already!
+        if (t.reminderSent) return false;
+
+        // 3. Ring ONLY when assigned time/date has arrived!
+        if (t.dueDate === todayDateStr && t.dueTime) {
+          return currentTimeStr >= t.dueTime;
+        }
+
+        // Overdue task from past date (only if user hasn't turned off alarm)
+        if (t.dueDate < todayDateStr && t.dueTime) {
+          return true;
+        }
+
+        return false;
       });
 
       if (ringing) {
@@ -101,7 +114,10 @@ export const WorkSpaceView = () => {
   const handleSnoozeAlarm = () => {
     stopContinuousAlarm();
     if (activeAlarmTask) {
-      snoozeNotification(activeAlarmTask.id, 5);
+      const now = new Date();
+      now.setMinutes(now.getMinutes() + 5);
+      const newDueTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      updateTask(activeAlarmTask.id, { dueTime: newDueTime, reminderSent: false });
     }
     setActiveAlarmTask(null);
   };
@@ -110,6 +126,7 @@ export const WorkSpaceView = () => {
     stopContinuousAlarm();
     if (activeAlarmTask) {
       toggleTaskComplete(activeAlarmTask.id);
+      updateTask(activeAlarmTask.id, { reminderSent: true });
     }
     setActiveAlarmTask(null);
   };
@@ -141,16 +158,22 @@ export const WorkSpaceView = () => {
     e.preventDefault();
     if (!taskTitle.trim()) return;
 
+    const now = new Date();
+    const currentHoursMins = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const targetDate = assignDate || todayStr;
+    const isPastTime = targetDate < todayStr || (targetDate === todayStr && dueTime < currentHoursMins);
+
     addTask({
       title: taskTitle.trim(),
       description: noteContent.trim() || undefined,
       category: tab === 'notes' ? 'Note' : 'Work Task',
       priority: priority,
       status: 'To Do',
-      dueDate: assignDate || todayStr,
+      dueDate: targetDate,
       dueTime: dueTime,
-      reminderDateTime: `${assignDate || todayStr}T${dueTime}`,
+      reminderDateTime: `${targetDate}T${dueTime}`,
       recurring: 'None',
+      reminderSent: isPastTime,
     });
 
     setTaskTitle('');
