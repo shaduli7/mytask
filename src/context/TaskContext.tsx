@@ -290,8 +290,8 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
             ...t,
             ...updatedFields,
             completedAt: isMarkingDone ? new Date().toISOString() : (updatedFields.status && updatedFields.status !== 'Done' ? null : t.completedAt),
-            reminderSent: isMarkingDone ? true : t.reminderSent,
-            snoozedUntil: isMarkingDone ? null : t.snoozedUntil,
+            reminderSent: updatedFields.reminderSent !== undefined ? updatedFields.reminderSent : (isMarkingDone ? true : t.reminderSent),
+            snoozedUntil: isMarkingDone ? null : (updatedFields.snoozedUntil !== undefined ? updatedFields.snoozedUntil : t.snoozedUntil),
           };
         }
         return t;
@@ -427,12 +427,16 @@ export const TaskProvider = ({ children }: { children: ReactNode }) => {
   const snoozeNotification = (taskId: string, minutes: number) => {
     const snoozeTime = new Date();
     snoozeTime.setMinutes(snoozeTime.getMinutes() + minutes);
+    const hours = String(snoozeTime.getHours()).padStart(2, '0');
+    const mins = String(snoozeTime.getMinutes()).padStart(2, '0');
+    const newDueTime = `${hours}:${mins}`;
 
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
           return {
             ...t,
+            dueTime: newDueTime,
             snoozedUntil: snoozeTime.toISOString(),
             reminderSent: false,
           };
